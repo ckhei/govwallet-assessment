@@ -7,26 +7,32 @@ import (
 	"time"
 )
 
-func redeemReward(staffMappingFilePath string, redemptionFilePath string, staffID string) {
+func redeemReward(staffMappingFilePath string, redemptionFilePath string, staffID string) bool {
 	teamName := checkStaff(staffMappingFilePath, staffID)
-	hasRedeemed := checkRedemption(redemptionFilePath, teamName)
-
-	if !hasRedeemed {
-		file, err := os.OpenFile(redemptionFilePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-		if err != nil {
-			fmt.Printf("Error opening redemption CSV for writing: %v\n", err)
-			return
-		}
-		defer file.Close()
-
-		writer := csv.NewWriter(file)
-		defer writer.Flush()
-
-		writer.Write([]string{teamName, fmt.Sprintf("%d", time.Now().UnixMilli())})
-		fmt.Printf("Team %s has successfully redeemed the reward.\n", teamName)
-	} else {
-		fmt.Printf("Team %s is unable to redeem the reward.\n", teamName)
+	if teamName == "" {
+		fmt.Printf("Staff %s is not registered.\n", staffID)
+		return false
 	}
+
+	hasRedeemed := checkRedemption(redemptionFilePath, teamName)
+	if hasRedeemed {
+		fmt.Printf("Team %s cannot redeem the reward as they have already been redeemed.\n", teamName)
+		return false
+	}
+
+	file, err := os.OpenFile(redemptionFilePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		fmt.Printf("Error opening redemption CSV for writing: %v\n", err)
+		return false
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	writer.Write([]string{teamName, fmt.Sprintf("%d", time.Now().UnixMilli())})
+	fmt.Printf("Team %s has successfully redeemed the reward.\n", teamName)
+	return true
 }
 
 func checkStaff(filePath string, staffID string) string {
